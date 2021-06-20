@@ -1,8 +1,12 @@
 import ws from 'k6/ws';
-import { check, sleep } from 'k6';
+import { check } from 'k6';
+import uuid from './lib/uuid.js';
+import { createMessageStream } from './lib/message.js';
+const sessionId = uuid.v4();
 
 export default function () {
-  const url = 'ws://127.0.0.1:8080/event';
+
+  const url = `ws://127.0.0.1:8080/event?sessionId=${sessionId}`;
   const params = {};
 
   const res = ws.connect(url, params, (socket) => {
@@ -15,14 +19,14 @@ export default function () {
       }, 1000);
 
       // immediately send first set of events
-      socket.send(JSON.stringify(firstMsg));
+      socket.send(JSON.stringify(createMessageStream(sessionId, true, false, 3)));
 
       // wait to send second set of messages
       socket.setTimeout(() => {
-        socket.send(JSON.stringify(secondMsg));
+        socket.send(JSON.stringify(createMessageStream(sessionId, false, true, 2)));
         // TODO terminate session client or server side?
         //socket.close();
-      }, 3000);
+      }, 10);
 
     });
     socket.on('message', (data) => {
@@ -33,35 +37,6 @@ export default function () {
   });
 
   check(res, { 'status is 101': (r) => r && r.status === 101 });
-}
+};
 
-const firstMsg = [
-  {
-    time: Date.now(),
-    type: 'SESSION_START',
-    session_id: '4cc700ae-4510-43f2-b939-1cd18dbf56a3',
-  },
-  {
-    time: Date.now() + 1,
-    type: 'EVENT',
-    name: 'cart_load'
-  },
-  {
-    time: Date.now() + 2,
-    type: 'EVENT',
-    name: 'cart_show'
-  }
-];
-
-const secondMsg = [
-  {
-    time: Date.now(),
-    type: 'EVENT',
-    name: 'cart_checkout'
-  },
-  {
-    time: Date.now(),
-    type: 'SESSION_END',
-    session_id: '4cc700ae-4510-43f2-b939-1cd18dbf56a3',
-  },
-];
+// TODO hit REST endpoint to verify those records were created
