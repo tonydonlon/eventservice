@@ -1,22 +1,13 @@
-package websocket
+package handlers
 
 import (
 	"net/http"
 
 	"github.com/gorilla/websocket"
-	"github.com/sirupsen/logrus"
 	"github.com/tonydonlon/eventservice/api"
-	"github.com/tonydonlon/eventservice/logger"
 )
 
-// TODO remove global
-var log *logrus.Logger
-
-func init() {
-	log = logger.GetLogger()
-}
-
-// WebsocketHandler handles incoming websocket events
+// WebsocketHandler handles incoming websocket event streams
 func WebsocketHandler(wr api.EventWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID := r.URL.Query().Get("sessionId")
@@ -30,8 +21,11 @@ func WebsocketHandler(wr api.EventWriter) http.HandlerFunc {
 		defer c.Close()
 
 		for {
-			var message []api.Event
+			var message []api.SessionEvent
 			err = c.ReadJSON(&message)
+
+			// TODO closehandler send sessionEND
+
 			// TODO message validation;missing values, etc.
 			if err != nil {
 				log.Error("Error reading json.", err)
@@ -44,7 +38,6 @@ func WebsocketHandler(wr api.EventWriter) http.HandlerFunc {
 
 			// SESSION_START is guaranteed to be first and SESSION_END is guaranteed to be last
 			// TODO how to be defensive if that is not the case
-			// spew.Dump(len(message), message[0], message[len(message)-1])
 
 			// TODO create event writer bus that has message channel per session
 			for _, evt := range message {
