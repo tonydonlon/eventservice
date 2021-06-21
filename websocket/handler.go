@@ -7,19 +7,17 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/tonydonlon/eventservice/api"
 	"github.com/tonydonlon/eventservice/logger"
-	"github.com/tonydonlon/eventservice/writers"
 )
 
+// TODO remove global
 var log *logrus.Logger
 
 func init() {
 	log = logger.GetLogger()
 }
 
-type WebsocketEventHandler struct{}
-
-// Handler handles incoming websocket events
-func (ws *WebsocketEventHandler) Handler() http.HandlerFunc {
+// WebsocketHandler handles incoming websocket events
+func WebsocketHandler(wr api.EventWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		sessionID := r.URL.Query().Get("sessionId")
 
@@ -30,14 +28,6 @@ func (ws *WebsocketEventHandler) Handler() http.HandlerFunc {
 			return
 		}
 		defer c.Close()
-		// TODO writer from service not be newed up here
-		//wr := writers.StdOutWriter{}
-		wr := writers.PostgreSQLWriter{}
-		err = wr.Init()
-		if err != nil {
-			log.Error("db init:", err)
-			return
-		}
 
 		for {
 			var message []api.Event
@@ -71,6 +61,7 @@ func (ws *WebsocketEventHandler) Handler() http.HandlerFunc {
 						log.Error("write:", err)
 					}
 					log.Info("session ended: closing connection")
+					// TODO send message "bye"
 					c.Close()
 					return
 				default:

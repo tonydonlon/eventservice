@@ -15,7 +15,7 @@ func init() {
 // StdOutWriter implements events.EventWriter and writes to stdout
 type StdOutWriter struct{}
 
-func (StdOutWriter) Write(msg api.Event) error {
+func (s *StdOutWriter) Write(msg api.Event, sessionID string) error {
 	log.WithFields(logrus.Fields{
 		"name":  "StdOutWriter",
 		"event": msg,

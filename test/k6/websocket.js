@@ -6,7 +6,7 @@ const sessionId = uuid.v4();
 
 export default function () {
 
-  const url = `ws://127.0.0.1:8080/event?sessionId=${sessionId}`;
+  const url = `ws://127.0.0.1:8080/ws?sessionId=${sessionId}`;
   const params = {};
 
   const res = ws.connect(url, params, (socket) => {
