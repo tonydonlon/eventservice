@@ -47,7 +47,7 @@ func main() {
 
 	router := mux.NewRouter()
 	router.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
-		log.Info("healthcheck")
+		log.Debug("healthcheck")
 		io.WriteString(w, "OK")
 	})
 	router.HandleFunc("/ws", service.WebsocketHandler)
