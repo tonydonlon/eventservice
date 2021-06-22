@@ -1,4 +1,4 @@
-package handlers
+package api
 
 import (
 	"encoding/json"
@@ -6,20 +6,10 @@ import (
 
 	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
-	"github.com/sirupsen/logrus"
-	"github.com/tonydonlon/eventservice/api"
-	"github.com/tonydonlon/eventservice/logger"
 )
 
-// TODO remove global
-var log *logrus.Logger
-
-func init() {
-	log = logger.GetLogger()
-}
-
-// TODO api.EventService should be composed of all the handlers
-func SessionEventHandler(reader api.SessionReader) http.HandlerFunc {
+// GetSessionEvents gets a session and all it's events over REST
+func GetSessionEvents(reader SessionReader) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		// TODO is this the best way to validate UUID?
@@ -29,9 +19,9 @@ func SessionEventHandler(reader api.SessionReader) http.HandlerFunc {
 			http.Error(w, "session_id must be a UUID", http.StatusBadRequest)
 			return
 		}
-		log.Infof("Retrieving events for sessionID: %s", sessionID)
 		w.Header().Set("Content-Type", "application/json")
 
+		log.Infof("Retrieving events for sessionID: %s", sessionID)
 		sessionEvents, err := reader.SessionEvents(sessionID.String())
 		if err != nil {
 			http.Error(w, http.StatusText(http.StatusInternalServerError),
@@ -41,6 +31,7 @@ func SessionEventHandler(reader api.SessionReader) http.HandlerFunc {
 
 		// no results for sessionID
 		if sessionEvents == nil {
+			log.Infof("no events fountd for %s", sessionID)
 			http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 			return
 		}

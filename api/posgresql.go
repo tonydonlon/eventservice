@@ -1,4 +1,4 @@
-package writers
+package api
 
 import (
 	"fmt"
@@ -8,10 +8,9 @@ import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
-	"github.com/tonydonlon/eventservice/api"
 )
 
-// PostgreSQLWriter implements EventWriter and writes to a PostGreSQL database
+// PostgreSQLWriter implements EventWriter by writing to a PostGreSQL database
 type PostgreSQLWriter struct {
 	conn *sqlx.DB
 }
@@ -42,8 +41,8 @@ func (p *PostgreSQLWriter) Init() error {
 	return nil
 }
 
-// Write insert session events to a PostgreSQL database
-func (p *PostgreSQLWriter) Write(msg api.SessionEvent, sessionID string) error {
+// Write inserts session events to a PostgreSQL database
+func (p *PostgreSQLWriter) Write(msg SessionEvent, sessionID string) error {
 	log.WithFields(logrus.Fields{
 		"name":  "PostgreSQLWriter",
 		"event": msg,
@@ -52,9 +51,9 @@ func (p *PostgreSQLWriter) Write(msg api.SessionEvent, sessionID string) error {
 	tx := p.conn.MustBegin()
 	// TODO use NamedQuery
 	switch msg.Type {
-	case api.StartSession:
+	case StartSession:
 		tx.MustExec("INSERT INTO sessions (session_id, session_start) VALUES ($1, to_timestamp($2 / 1000.0))", msg.SessionID, msg.Timestamp)
-	case api.EndSession:
+	case EndSession:
 		tx.MustExec("UPDATE sessions SET session_end=to_timestamp($1 / 1000.0) WHERE session_id=$2", msg.Timestamp, msg.SessionID)
 	default:
 		sql := `
@@ -68,7 +67,7 @@ func (p *PostgreSQLWriter) Write(msg api.SessionEvent, sessionID string) error {
 	return tx.Commit()
 }
 
-// PostgreSQLReader implements
+// PostgreSQLReader implements SessionReader
 type PostgreSQLReader struct {
 	conn *sqlx.DB
 }
@@ -97,12 +96,14 @@ func (p *PostgreSQLReader) Init() error {
 
 	return nil
 }
-func (p *PostgreSQLReader) SessionEvents(sessionID string) (*api.SessionEventsResponse, error) {
-	sessionEvents := &api.SessionEventsResponse{
-		Type:     api.TypeSession,
+
+// SessionEvents retrieves a Session and all of it's set of events
+func (p *PostgreSQLReader) SessionEvents(sessionID string) (*SessionEventsResponse, error) {
+	sessionEvents := &SessionEventsResponse{
+		Type:     TypeSession,
 		Start:    0,
 		End:      0,
-		Children: []api.Event{},
+		Children: []Event{},
 	}
 
 	sql := `
@@ -139,8 +140,8 @@ func (p *PostgreSQLReader) SessionEvents(sessionID string) (*api.SessionEventsRe
 
 		sessionEvents.Start = q.Session_start.UnixNano() / 1000000
 		sessionEvents.End = q.Session_end.UnixNano() / 1000000
-		sessionEvents.Children = append(sessionEvents.Children, api.Event{
-			Type:      api.TypeEvent,
+		sessionEvents.Children = append(sessionEvents.Children, Event{
+			Type:      TypeEvent,
 			Timestamp: q.Event_timestamp.UnixNano() / 1000000,
 			Name:      q.Event_name,
 		})

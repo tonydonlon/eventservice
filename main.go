@@ -10,9 +10,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/tonydonlon/eventservice/api"
-	"github.com/tonydonlon/eventservice/handlers"
+	"github.com/tonydonlon/eventservice/broker"
 	"github.com/tonydonlon/eventservice/logger"
-	"github.com/tonydonlon/eventservice/writers"
 )
 
 var log *logrus.Logger
@@ -23,24 +22,11 @@ func init() {
 }
 
 func main() {
-	var eventWriter api.EventWriter
-
-	// TODO move all this to api.EventService factory
-	if os.Getenv("DATASTORE") == "postgres" {
-		eventWriter = &writers.PostgreSQLWriter{}
-	} else {
-		eventWriter = &writers.StdOutWriter{}
+	service, err := api.NewEventService()
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	if err := eventWriter.Init(); err != nil {
-		log.Error(err)
-		return
-	}
-
-	service := &api.EventService{
-		WebsocketHandler: handlers.WebsocketHandler(eventWriter),
-		EventWriter:      eventWriter,
-	}
 	// TODO REST/stateless http endpoint for fallback if WS is not supported client-side
 	var portNumber = os.Getenv("HTTP_PORT")
 	serviceAddress := fmt.Sprintf("localhost:%s", portNumber)
@@ -51,9 +37,13 @@ func main() {
 		io.WriteString(w, "OK")
 	})
 	router.HandleFunc("/ws", service.WebsocketHandler)
-	reader := &writers.PostgreSQLReader{}
-	reader.Init()
-	router.HandleFunc("/session/{session_id}", handlers.SessionEventHandler(reader)).Methods("GET")
+	router.HandleFunc("/session/{session_id}", service.SessionEventHandler).Methods("GET")
+
+	// for monitoring the writes to the database; TODO endpoint to stream every notification
+	databaseBus := broker.NewEventBus("Database")
+	done := make(chan bool)
+	databaseBus.Start(done)
+	api.SetupListenPostgreSQL(databaseBus.Messages, "customer_events")
 
 	srv := &http.Server{
 		Handler:      router,
