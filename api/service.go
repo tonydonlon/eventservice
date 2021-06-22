@@ -39,9 +39,11 @@ type EventService struct {
 	WebsocketHandler    http.HandlerFunc
 	EventTypes          EventTypes
 	EventBus            broker.EventBus
+	DatabaseBus         broker.EventBus
+	SSEHandler          http.HandlerFunc
 }
 
-// TODO Factory NewEventService
+// NewEventService creates the EventService API
 func NewEventService() (*EventService, error) {
 
 	// TODO make these reader/writer abstractions go away
@@ -75,10 +77,18 @@ func NewEventService() (*EventService, error) {
 		"event2": 3,
 	}
 
+	// for monitoring the writes to the database
+	databaseBus := broker.NewEventBus("Database")
+	done := make(chan bool)
+	databaseBus.Start(done)
+	SetupListenPostgreSQL(databaseBus.Messages, "customer_events")
+
 	service := &EventService{
 		WebsocketHandler:    WebsocketHandler(eventWriter),
 		SessionEventHandler: GetSessionEvents(eventReader),
+		SSEHandler:          SSEHandler(databaseBus),
 		EventBus:            *broker.NewEventBus("EventService"),
+		DatabaseBus:         *databaseBus,
 		EventTypes:          eventTypes,
 	}
 

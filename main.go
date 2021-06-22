@@ -10,7 +10,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 	"github.com/tonydonlon/eventservice/api"
-	"github.com/tonydonlon/eventservice/broker"
 	"github.com/tonydonlon/eventservice/logger"
 )
 
@@ -38,12 +37,7 @@ func main() {
 	})
 	router.HandleFunc("/ws", service.WebsocketHandler)
 	router.HandleFunc("/session/{session_id}", service.SessionEventHandler).Methods("GET")
-
-	// for monitoring the writes to the database; TODO endpoint to stream every notification
-	databaseBus := broker.NewEventBus("Database")
-	done := make(chan bool)
-	databaseBus.Start(done)
-	api.SetupListenPostgreSQL(databaseBus.Messages, "customer_events")
+	router.HandleFunc("/databaseevents", service.SSEHandler).Methods("GET")
 
 	srv := &http.Server{
 		Handler:      router,
