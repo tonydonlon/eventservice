@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
+	pq "github.com/lib/pq"
 	"github.com/sirupsen/logrus"
 )
 
@@ -125,7 +125,7 @@ func (p *PostgreSQLReader) SessionEvents(sessionID string) (*SessionEventsRespon
 
 	type queryResult struct {
 		Session_start   time.Time
-		Session_end     time.Time
+		Session_end     pq.NullTime
 		Event_name      string
 		Event_timestamp time.Time
 	}
@@ -139,7 +139,16 @@ func (p *PostgreSQLReader) SessionEvents(sessionID string) (*SessionEventsRespon
 		}
 
 		sessionEvents.Start = q.Session_start.UnixNano() / 1000000
-		sessionEvents.End = q.Session_end.UnixNano() / 1000000
+
+		// TODO ensure session end time happens always then this can go away...maybe
+		nullOrValue, err := q.Session_end.Value()
+		if err != nil {
+			log.Error(err)
+		}
+		if nullOrValue != nil {
+			sessionEvents.End = q.Session_end.Time.UnixNano() / 1000000
+		}
+
 		sessionEvents.Children = append(sessionEvents.Children, Event{
 			Type:      TypeEvent,
 			Timestamp: q.Event_timestamp.UnixNano() / 1000000,

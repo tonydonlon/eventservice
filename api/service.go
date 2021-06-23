@@ -77,19 +77,24 @@ func NewEventService() (*EventService, error) {
 		"event2": 3,
 	}
 
-	// for monitoring the writes to the database
-	databaseBus := broker.NewEventBus("Database")
-	done := make(chan bool)
-	databaseBus.Start(done)
-	SetupListenPostgreSQL(databaseBus.Messages, "customer_events")
-
 	service := &EventService{
 		WebsocketHandler:    WebsocketHandler(eventWriter),
 		SessionEventHandler: GetSessionEvents(eventReader),
-		SSEHandler:          SSEHandler(databaseBus),
-		EventBus:            *broker.NewEventBus("EventService"),
-		DatabaseBus:         *databaseBus,
-		EventTypes:          eventTypes,
+		// SSEHandler:          SSEHandler(databaseBus),
+		EventBus: *broker.NewEventBus("EventService"),
+		// DatabaseBus:         *databaseBus,
+		EventTypes: eventTypes,
+	}
+
+	if os.Getenv("DATASTORE") == "postgres" {
+		// for monitoring the writes to the database
+		databaseBus := broker.NewEventBus("Database")
+		done := make(chan bool)
+		databaseBus.Start(done)
+		SetupListenPostgreSQL(databaseBus.Messages, "customer_events")
+
+		service.DatabaseBus = *databaseBus
+		service.SSEHandler = SSEHandler(databaseBus)
 	}
 
 	return service, nil

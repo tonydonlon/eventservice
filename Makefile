@@ -37,11 +37,11 @@ docker-build: ## Build the container
 	docker build -t $(APP_NAME) .
 
 docker-run: ## Run container configured in `dev.env`
-	docker run -i -t --rm --env-file=./dev.env --name="$(APP_NAME)" $(APP_NAME)
+	docker run -i -t --rm -p 8080:8080 --env-file=./docker.env --name="$(APP_NAME)" $(APP_NAME)
 
 docker-stop: ## Stop and remove a running container
 	docker stop $(APP_NAME); docker rm $(APP_NAME)
 
 # TODO this does not work on linux host `--add-host=host.docker.internal:host-gateway`
 docker-shell: ## Run container and login to bash shell
-	docker run -it --rm --env-file=./dev.env --name="$(APP_NAME)" $(APP_NAME) /bin/sh
+	docker run -it --rm --env-file=./docker.env --name="$(APP_NAME)" $(APP_NAME) /bin/sh

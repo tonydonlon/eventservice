@@ -28,7 +28,10 @@ func main() {
 
 	// TODO REST/stateless http endpoint for fallback if WS is not supported client-side
 	var portNumber = os.Getenv("HTTP_PORT")
-	serviceAddress := fmt.Sprintf("localhost:%s", portNumber)
+	if portNumber == "" {
+		portNumber = "8080"
+	}
+	serviceAddress := fmt.Sprintf(":%s", portNumber)
 
 	router := mux.NewRouter()
 	router.HandleFunc("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +40,7 @@ func main() {
 	})
 	router.HandleFunc("/ws", service.WebsocketHandler)
 	router.HandleFunc("/session/{session_id}", service.SessionEventHandler).Methods("GET")
-	router.HandleFunc("/databaseevents", service.SSEHandler).Methods("GET")
+	router.HandleFunc("/database_events", service.SSEHandler).Methods("GET")
 
 	srv := &http.Server{
 		Handler:      router,

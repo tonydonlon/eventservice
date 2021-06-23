@@ -15,13 +15,14 @@ import (
 // SetupListenPostgreSQL setups a event listener for all events in a PostgreSQL database
 // Note: this requires setting up a LISTEN/NOTIFY proc in the database before events are receivable
 func SetupListenPostgreSQL(messages chan []byte, eventName string) {
-	var conninfo string = fmt.Sprintf(
-		"dbname=%s user=%s password=%s sslmode=disable",
-		os.Getenv("DB_NAME"),
+	conninfo := fmt.Sprintf(
+		"host=%s user=%s password=%s dbname=%s sslmode=disable search_path=%s",
+		os.Getenv("DB_HOST"),
 		os.Getenv("DB_USER"),
 		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_PATH"),
 	)
-
 	_, err := sql.Open("postgres", conninfo)
 	if err != nil {
 		log.Fatal(err)

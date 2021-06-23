@@ -3,7 +3,7 @@ import http from "k6/http";
 import { URL } from 'https://jslib.k6.io/url/1.0.0/index.js';
 
 export default () => {
-    const sessionId = __ENV.SESSION_ID || '8e0b8eea-24f4-4cb6-b525-e8835f824768';
+    const sessionId = __ENV.SESSION_ID || '38586dcd-4ce4-486c-8770-6b2f87fed6bf';
     const baseURL = __ENV.EVENT_URL || 'http://localhost:8080';
     const url = new URL(`${baseURL}/session/${sessionId}`);
 
