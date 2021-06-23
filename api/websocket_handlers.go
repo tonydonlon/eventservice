@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	uuid "github.com/satori/go.uuid"
 )
 
 // WebsocketHandler handles incoming websocket event streams
 func WebsocketHandler(wr EventWriter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		sessionID := r.URL.Query().Get("sessionId")
-
 		var upgrader = websocket.Upgrader{}
 		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
@@ -20,6 +19,17 @@ func WebsocketHandler(wr EventWriter) http.HandlerFunc {
 			return
 		}
 		defer c.Close()
+
+		sessId, err := uuid.FromString(r.URL.Query().Get("sessionId"))
+		if err != nil {
+			log.Errorf("%s is not UUID", r.URL.Query().Get("sessionId"))
+			msg := fmt.Sprintf("param sessionId must be a UUID: %s", r.URL.Query().Get("sessionId"))
+			log.Error(msg)
+			errorMsg := ClientError{msg}
+			c.WriteJSON(errorMsg)
+			return
+		}
+		sessionID := sessId.String()
 
 		// should closehandler send sessionEnd?
 		// depends if the client can send end before dropping (like on browsers .onbeforeunload event)
