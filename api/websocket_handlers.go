@@ -34,6 +34,7 @@ func WebsocketHandler(wr EventWriter) http.HandlerFunc {
 		// should closehandler send sessionEnd?
 		// depends if the client can send end before dropping (like on browsers .onbeforeunload event)
 
+		// *** NOTE if we want session to be recontinued, this closeHandler should be REMOVED
 		// TODO make this not hacky... use mutex lock. ensure one session END can be written
 		sessionEndSent := false
 		c.SetCloseHandler(func(code int, text string) error {
@@ -93,7 +94,6 @@ func WebsocketHandler(wr EventWriter) http.HandlerFunc {
 						log.Error("write:", err)
 					}
 				case EndSession:
-					sessionEndSent = true
 					err = wr.Write(evt, sessionID)
 					if err != nil {
 						log.Error("write:", err)
