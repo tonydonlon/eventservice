@@ -1,5 +1,5 @@
 # eventservice
-streaming event service
+streaming event service - [interview assignment](assignment.pdf)
 
 ## HTTP Service
 * `/healthcheck` http GET to return simple 200 and 'OK'
